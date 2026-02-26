@@ -36,9 +36,7 @@ export default function Login() {
       if (contentType && contentType.indexOf("application/json") !== -1) {
         data = await response.json();
       } else {
-        const text = await response.text();
-        console.error("Non-JSON response:", text);
-        throw new Error("Server returned non-JSON response");
+        throw new Error("Could not connect to the server. Please check if the backend is running.");
       }
 
       if (!response.ok) {

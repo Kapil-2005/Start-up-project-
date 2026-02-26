@@ -43,7 +43,13 @@ export default function Signup() {
                 })
             });
 
-            const data = await response.json();
+            let data;
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                data = await response.json();
+            } else {
+                throw new Error("Could not connect to the server. Please check if the backend is running.");
+            }
 
             if (!response.ok) {
                 throw new Error(data.message || 'Signup failed');
