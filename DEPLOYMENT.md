@@ -60,3 +60,13 @@ This guide will help you deploy your SmartForm application to the web.
 3.  Top of the page -> **Manual Deploy** -> **Deploy latest commit** (to restart the server with new env vars).
 
 **🎉 Done! Your SmartForm is now live!**
+
+---
+
+### Daily Git Routine
+To push your code to GitHub daily, use the following commands in your terminal:
+```bash
+git add .
+git commit -m "Your commit message describing what you changed"
+git push
+```
