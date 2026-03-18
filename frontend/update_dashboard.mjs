@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import fs from 'fs';
+
+const updatedContent = `import React, { useState } from 'react';
 import {
     Type, Mail, Hash, List, Trash2, Save, FileText,
     Settings, Eye, ArrowLeft, GripVertical, CheckSquare, Calendar, Phone, Upload, GitBranch, Share2, Plus, Palette, LayoutTemplate
@@ -35,7 +37,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core';
 
 const DraggableSidebarElement = ({ type, icon: Icon, label, onClick }) => {
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-        id: `sidebar-${type}`,
+        id: \\\`sidebar-\\\${type}\\\`,
         data: { type, isSidebarElement: true, label, icon: Icon }
     });
     
@@ -79,7 +81,7 @@ const CanvasDropZone = ({ children, themeColor, fontFamily, isEmpty }) => {
                  fontFamily, 
                  isOver && !isEmpty ? "ring-4 ring-primary/20 border-primary scale-[1.01]" : "border-white/50"
              )}
-             style={{ borderTop: `6px solid ${themeColor}` }}
+             style={{ borderTop: \\\`6px solid \\\${themeColor}\\\` }}
          >
              {children}
          </div>
@@ -254,7 +256,7 @@ export default function Dashboard() {
     // Theme State
     const [themeColor, setThemeColor] = useState(location.state?.template?.theme?.color || '#6366f1');
     const [fontFamily, setFontFamily] = useState(location.state?.template?.theme?.font || 'font-sans');
-    const [themeStyle] = useState('glass'); // 'flat' | 'glass' | 'elegant'
+    const [themeStyle, setThemeStyle] = useState('glass'); // 'flat' | 'glass' | 'elegant'
     
     // UI State
     const [showShareModal, setShowShareModal] = useState(false);
@@ -272,7 +274,7 @@ export default function Dashboard() {
         const newField = {
             id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
             type,
-            label: `New ${type.charAt(0).toUpperCase() + type.slice(1)} Field`,
+            label: \\\`New \\\${type.charAt(0).toUpperCase() + type.slice(1)} Field\\\`,
             placeholder: '',
             required: false,
             options: type === 'dropdown' || type === 'radio' ? ['Option A', 'Option B'] : [],
@@ -340,7 +342,7 @@ export default function Dashboard() {
     const addOption = (id) => {
         setFields(fields.map(field => {
             if (field.id === id) {
-                return { ...field, options: [...field.options, `Option ${field.options.length + 1}`] };
+                return { ...field, options: [...field.options, \\\`Option \\\${field.options.length + 1}\\\`] };
             }
             return field;
         }));
@@ -383,7 +385,7 @@ export default function Dashboard() {
             const data = await response.json();
 
             if (response.ok) {
-                setShareLink(`${window.location.origin}/form/${data.id}`);
+                setShareLink(\\\`\\\${window.location.origin}/form/\\\${data.id}\\\`);
                 setShowShareModal(true);
             } else {
                 alert('Failed to save form: ' + data.message);
@@ -454,7 +456,7 @@ export default function Dashboard() {
                                 onClick={saveForm}
                                 disabled={loading}
                                 className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white rounded-xl transition-all shadow-lg hover:shadow-xl active:scale-95"
-                                style={{ backgroundColor: themeColor, boxShadow: `0 10px 15px -3px ${themeColor}40` }}
+                                style={{ backgroundColor: themeColor, boxShadow: \\\`0 10px 15px -3px \\\${themeColor}40\\\` }}
                             >
                                 {loading ? 'Saving...' : <><Share2 size={18} /> Publish Form</>}
                             </button>
@@ -712,7 +714,7 @@ export default function Dashboard() {
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="flex-1 px-4 py-3 bg-primary text-white rounded-xl font-bold hover:bg-indigo-600 transition-colors text-center shadow-lg shadow-primary/30"
-                                        style={{ backgroundColor: themeColor, boxShadow: `0 10px 15px -3px ${themeColor}40` }}
+                                        style={{ backgroundColor: themeColor, boxShadow: \\\`0 10px 15px -3px \\\${themeColor}40\\\` }}
                                     >
                                         Open Form
                                     </a>
@@ -739,3 +741,6 @@ export default function Dashboard() {
         </DndContext>
     );
 }
+`
+
+fs.writeFileSync('src/pages/Dashboard.jsx', updatedContent);

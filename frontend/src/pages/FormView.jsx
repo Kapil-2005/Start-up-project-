@@ -28,7 +28,7 @@ export default function FormView() {
                 } else {
                     setError(data.message || 'Form not found');
                 }
-            } catch (err) {
+            } catch {
                 setError('Failed to load form');
             } finally {
                 setLoading(false);
