@@ -245,7 +245,7 @@ export default function FormView() {
     const progress = ((currentStep + 1) / form.fields.length) * 100;
 
     return (
-        <div className={`min-h-screen flex flex-col font-sans transition-colors duration-500 bg-slate-50`}>
+        <div className={`min-h-screen flex flex-col ${form.theme?.font || 'font-sans'} transition-colors duration-500 bg-slate-50`}>
             {/* Progress Bar */}
             <div className="fixed top-0 left-0 w-full h-1.5 bg-slate-200 z-50">
                 <div

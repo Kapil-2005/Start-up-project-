@@ -20,6 +20,11 @@ export default {
                 serif: ['Playfair Display', 'serif'],
                 mono: ['Roboto', 'sans-serif'], // reusing mono for Roboto temporarily or just add named keys
                 montserrat: ['Montserrat', 'sans-serif'],
+                inter: ['Inter', 'sans-serif'],
+                poppins: ['Poppins', 'sans-serif'],
+                lato: ['Lato', 'sans-serif'],
+                oswald: ['Oswald', 'sans-serif'],
+                quicksand: ['Quicksand', 'sans-serif'],
             }
         },
     },

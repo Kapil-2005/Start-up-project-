@@ -413,6 +413,11 @@ export default function Dashboard() {
         { name: 'Playfair Display', class: 'font-serif', description: 'Elegant & Classic' },
         { name: 'Roboto', class: 'font-mono', description: 'Structured' },
         { name: 'Montserrat', class: 'font-montserrat', description: 'Bold & Geometric' },
+        { name: 'Inter', class: 'font-inter', description: 'Clean & Professional' },
+        { name: 'Poppins', class: 'font-poppins', description: 'Friendly & Rounded' },
+        { name: 'Lato', class: 'font-lato', description: 'Warm & Sleek' },
+        { name: 'Oswald', class: 'font-oswald', description: 'Strong & Condensed' },
+        { name: 'Quicksand', class: 'font-quicksand', description: 'Soft & Quirky' },
     ];
 
     const isDraggingSidebarItem = activeDragId?.toString().startsWith('sidebar-');
