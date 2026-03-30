@@ -1,13 +1,12 @@
 
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, Phone } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Phone, User } from 'lucide-react';
 import { endpoints } from '../config/api';
 
 export default function Login() {
   const [formData, setFormData] = useState({
-    email: '',
-    phone: '',
+    identifier: '',
     password: ''
   });
   const [error, setError] = useState('');
@@ -76,33 +75,16 @@ export default function Login() {
           )}
 
           <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-slate-700" htmlFor="email">Email Address</label>
+            <label className="text-sm font-semibold text-slate-700" htmlFor="identifier">Email or Phone Number</label>
             <div className="relative group">
-              <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" />
+              <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" />
               <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
+                type="text"
+                id="identifier"
+                name="identifier"
+                value={formData.identifier}
                 onChange={handleChange}
-                placeholder="you@example.com"
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none text-slate-800 placeholder:text-slate-400"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-slate-700" htmlFor="phone">Phone Number</label>
-            <div className="relative group">
-              <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" />
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                placeholder="+1 (555) 000-0000"
+                placeholder="you@example.com or +1 (555) 000-0000"
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none text-slate-800 placeholder:text-slate-400"
                 required
               />

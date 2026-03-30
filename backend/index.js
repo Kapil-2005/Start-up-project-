@@ -24,6 +24,7 @@ mongoose.connect(MONGO_URI)
 // Models
 const Form = require('./models/Form');
 const Response = require('./models/Response');
+const User = require('./models/User');
 
 // --- Routes ---
 
@@ -122,16 +123,60 @@ app.get('/api/forms/:id/responses', async (req, res) => {
     }
 });
 
-// 6. User Registration (Simplified for now)
-app.post('/api/register', (req, res) => {
-    // In a real app, save to MongoDB User model
-    res.status(201).json({ message: 'User registered' });
+// 6. User Registration
+app.post('/api/register', async (req, res) => {
+    try {
+        const { name, email, phone, password } = req.body;
+        
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: 'Name, email, and password are required' });
+        }
+
+        // Check if user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: 'User with this email already exists' });
+        }
+
+        const newUser = new User({
+            name,
+            email,
+            phone: phone || undefined,
+            password // In a production app, hash the password
+        });
+
+        const savedUser = await newUser.save();
+        res.status(201).json({ message: 'User registered successfully', userId: savedUser._id });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
 });
 
-// 7. User Login (Simplified for now)
-app.post('/api/login', (req, res) => {
-    // In a real app, verify against MongoDB User model
-    res.json({ message: 'Login successful', user: { name: 'Demo User' } });
+// 7. User Login (Supports Email and Phone Signin)
+app.post('/api/login', async (req, res) => {
+    try {
+        const { identifier, password } = req.body;
+        
+        if (!identifier || !password) {
+            return res.status(400).json({ message: 'Email/Phone and password are required' });
+        }
+
+        // Find user by either email or phone
+        const user = await User.findOne({
+            $or: [
+                { email: identifier },
+                { phone: identifier }
+            ]
+        });
+
+        if (!user || user.password !== password) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        res.json({ message: 'Login successful', user: { id: user._id, name: user.name, email: user.email, phone: user.phone } });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
 });
 
 // 8. AI Form Generator (Mock AI)
