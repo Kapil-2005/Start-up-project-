@@ -44,6 +44,12 @@ export default function Login() {
       }
 
       console.log('Login successful:', data);
+      
+      // Store user data in localStorage
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+
       window.location.href = '/dashboard';
     } catch (err) {
       setError(err.message);
