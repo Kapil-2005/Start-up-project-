@@ -191,46 +191,46 @@ const SortableField = (props) => {
             {activeLogicField === field.id && (
                 <div className="mt-4 p-5 bg-indigo-50/50 border border-indigo-100 rounded-xl animate-scale-in relative z-20 shadow-sm">
                     <div className="flex items-center gap-2 mb-4 text-indigo-600 font-bold uppercase tracking-wide text-xs">
-                        <GitBranch size={14} /> Conditional Logic Rules
+                        <GitBranch size={14} /> Smart Display Logic
                     </div>
+                    <p className="text-sm text-slate-500 mb-3 bg-white p-3 border border-slate-200 rounded-lg shadow-sm">This field will be dynamically shown based on a previous answer.</p>
 
-                    {field.logic?.length === 0 && (
-                        <p className="text-sm text-slate-500 mb-3 bg-white p-3 border border-slate-200 rounded-lg shadow-sm">When users select specific options, direct them to different questions.</p>
-                    )}
-
-                    {field.logic?.map((rule, idx) => (
-                        <div key={idx} className="flex items-center gap-3 mb-3 text-sm bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
-                            <span className="font-medium text-slate-600 whitespace-nowrap">If answer is</span>
+                    <div className="flex flex-col gap-3 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                        <div className="flex items-center gap-3 text-sm">
+                            <span className="font-medium text-slate-600 min-w-max">Show this field ONLY IF:</span>
                             <select
-                                className="bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 flex-1 font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500"
-                                value={rule.ifValue}
-                                onChange={(e) => updateLogicRule(field.id, idx, 'ifValue', e.target.value)}
+                                className="bg-slate-50 border border-slate-200 rounded-md px-3 py-2 flex-1 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                                value={field.logic?.dependentFieldId || ''}
+                                onChange={(e) => updateField(field.id, 'logic', { ...(field.logic || {}), dependentFieldId: e.target.value })}
                             >
-                                <option value="">Select Option...</option>
-                                {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
-                            <span className="font-medium text-slate-600 whitespace-nowrap px-2">then jump to</span>
-                            <select
-                                className="bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 flex-1 font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500"
-                                value={rule.jumpTo}
-                                onChange={(e) => updateLogicRule(field.id, idx, 'jumpTo', e.target.value)}
-                            >
-                                <option value="">Next Question (Default)</option>
-                                {fields.map((f, i) => {
-                                    if (i > index) return <option key={f.id} value={f.id}>Q{i + 1}: {f.label}</option>
-                                    return null;
-                                })}
-                                <option value="end">Submit Form</option>
+                                <option value="">Always Show (No Logic)</option>
+                                {fields.slice(0, index).filter(f => ['dropdown', 'radio', 'checkbox'].includes(f.type)).map((f, i) => (
+                                    <option key={f.id} value={f.id}>{f.label}</option>
+                                ))}
                             </select>
                         </div>
-                    ))}
-
-                    <button
-                        onClick={() => addLogicRule(field.id)}
-                        className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 hover:underline flex items-center gap-1.5 mt-2 bg-indigo-100/50 px-3 py-1.5 rounded-md transition-colors"
-                    >
-                        <Plus size={14} /> Add New Rule
-                    </button>
+                        {field.logic?.dependentFieldId && (
+                            <div className="flex items-center gap-3 text-sm">
+                                <span className="font-medium text-slate-600 min-w-max">Equals to answer:</span>
+                                <select
+                                    className="bg-slate-50 border border-slate-200 rounded-md px-3 py-2 flex-1 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                                    value={field.logic?.dependentValue || ''}
+                                    onChange={(e) => updateField(field.id, 'logic', { ...(field.logic || {}), dependentValue: e.target.value })}
+                                >
+                                    <option value="">Select Value...</option>
+                                    {fields.find(f => f.id === field.logic.dependentFieldId)?.options?.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                    {fields.find(f => f.id === field.logic.dependentFieldId)?.type === 'checkbox' && (
+                                        <>
+                                            <option value="Yes">Yes</option>
+                                            <option value="No">No</option>
+                                        </>
+                                    )}
+                                </select>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
@@ -254,6 +254,7 @@ export default function Dashboard() {
     // Theme State
     const [themeColor, setThemeColor] = useState(location.state?.template?.theme?.color || '#6366f1');
     const [fontFamily, setFontFamily] = useState(location.state?.template?.theme?.font || 'font-sans');
+    const [themeSponsor, setThemeSponsor] = useState(location.state?.template?.theme?.sponsor || 'SmartForm');
     const [themeStyle] = useState('glass'); // 'flat' | 'glass' | 'elegant'
     
     // UI State
@@ -376,7 +377,7 @@ export default function Dashboard() {
                 body: JSON.stringify({
                     title: formTitle,
                     fields,
-                    theme: { color: themeColor, font: fontFamily, style: themeStyle }
+                    theme: { color: themeColor, font: fontFamily, sponsor: themeSponsor, style: themeStyle }
                 })
             });
 
@@ -564,8 +565,27 @@ export default function Dashboard() {
                                             </div>
                                         </div>
 
+                                        {/* Brand Identity / White Label */}
+                                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/60 shadow-inner mb-6">
+                                            <h4 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                                                Workspace Branding
+                                            </h4>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Powered By Logo</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={themeSponsor} 
+                                                    onChange={(e) => setThemeSponsor(e.target.value)}
+                                                    placeholder="e.g. Acme Corp"
+                                                    className="w-full text-sm font-bold border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:border-transparent shadow-sm text-slate-800"
+                                                    style={{ '--tw-ring-color': themeColor }}
+                                                />
+                                                <p className="text-[10px] text-slate-500 mt-2 font-medium">✨ Removes generic branding and displays your Custom Logo Name exactly as entered.</p>
+                                            </div>
+                                        </div>
+
                                         {/* Typography */}
-                                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/60 shadow-inner">
+                                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/60 shadow-inner mb-6">
                                             <h4 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
                                                 Typography
                                             </h4>
