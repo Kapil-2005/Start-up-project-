@@ -15,7 +15,7 @@ app.use(cors({
 app.use(bodyParser.json());
 
 // MongoDB Connection
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/smartform';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://kapil44352005_db_user:vpTWCjUEDf5yVERl@cluster012.2g0syil.mongodb.net/?appName=Cluster012';
 
 mongoose.connect(MONGO_URI)
     .then(() => console.log('MongoDB Connected'))
@@ -127,7 +127,7 @@ app.get('/api/forms/:id/responses', async (req, res) => {
 app.post('/api/register', async (req, res) => {
     try {
         const { name, email, phone, password } = req.body;
-        
+
         if (!name || !email || !password) {
             return res.status(400).json({ message: 'Name, email, and password are required' });
         }
@@ -156,7 +156,7 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     try {
         const { identifier, password } = req.body;
-        
+
         if (!identifier || !password) {
             return res.status(400).json({ message: 'Email/Phone and password are required' });
         }

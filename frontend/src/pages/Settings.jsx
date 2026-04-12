@@ -6,10 +6,26 @@ import { User, Lock, Bell, Moon, Sun, Save, Shield } from 'lucide-react';
 export default function Settings() {
     const [activeTab, setActiveTab] = useState('profile');
     const [profile, setProfile] = useState({
-        name: 'John Doe',
-        email: 'john@example.com',
-        bio: 'Product Designer based in San Francisco'
+        name: 'User',
+        email: 'user@example.com',
+        bio: 'Professional user on SmartForm'
     });
+
+    React.useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            try {
+                const user = JSON.parse(storedUser);
+                setProfile({
+                    name: user.name || 'User',
+                    email: user.email || 'user@example.com',
+                    bio: 'Professional user on SmartForm'
+                });
+            } catch (e) {
+                console.error("Error parsing user data", e);
+            }
+        }
+    }, []);
     const [notifications, setNotifications] = useState({
         email: true,
         push: false,
@@ -66,8 +82,8 @@ export default function Settings() {
                                     </h2>
 
                                     <div className="flex items-center gap-6 pb-6 border-b border-slate-100">
-                                        <div className="w-20 h-20 rounded-full bg-slate-200 flex items-center justify-center text-2xl font-bold text-slate-500">
-                                            JD
+                                        <div className="w-20 h-20 rounded-full bg-slate-200 flex items-center justify-center text-2xl font-bold text-slate-500 uppercase">
+                                            {profile.name.charAt(0)}
                                         </div>
                                         <div>
                                             <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">

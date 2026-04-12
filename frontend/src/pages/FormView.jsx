@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { endpoints } from '../config/api';
-import { CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
+import { CheckCircle, ArrowRight, Sun, Moon, Sparkles, Download, Share2, Mail } from 'lucide-react';
 
 export default function FormView() {
     const { id } = useParams();
@@ -11,20 +10,18 @@ export default function FormView() {
     const [error, setError] = useState('');
     const [submitted, setSubmitted] = useState(false);
     const [formData, setFormData] = useState({});
-
-    // Typeform Style State
-    const [currentStep, setCurrentStep] = useState(0);
-    const [animating, setAnimating] = useState(false);
+    const [isDarkMode, setIsDarkMode] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         const fetchForm = async () => {
             try {
-                // Using the provided endpoint modification
                 const response = await fetch(endpoints.forms.replace('/api/forms', `/api/forms/${id}`));
                 const data = await response.json();
 
                 if (response.ok) {
                     setForm(data);
+                    document.title = `${data.title} | ${data.theme?.sponsor || 'SmartForm'}`;
                 } else {
                     setError(data.message || 'Form not found');
                 }
@@ -45,61 +42,24 @@ export default function FormView() {
         });
     };
 
-    const handleNext = (e) => {
-        if (e) e.preventDefault();
+    const visibleFields = form?.fields?.filter(field => {
+        if (!field.logic?.dependentFieldId) return true;
+        const depField = form.fields.find(f => f.id === field.logic.dependentFieldId);
+        if (!depField) return true;
+        return formData[depField.label] === field.logic.dependentValue;
+    }) || [];
 
-        // Basic validation
-        const field = form.fields[currentStep];
-        if (field.required && !formData[field.label]) {
-            alert('Please fill this field');
+    const handleSubmit = async (e) => {
+        if (e) e.preventDefault();
+        
+        // Validation check
+        const missingRequired = visibleFields.find(f => f.required && !formData[f.label]);
+        if (missingRequired) {
+            alert(`Please answer the required field: ${missingRequired.label}`);
             return;
         }
 
-        // Logic check
-        const nextStepIndex = getNextStep(currentStep, formData[field.label]);
-
-        if (nextStepIndex !== -1) {
-            setAnimating(true);
-            setTimeout(() => {
-                setCurrentStep(nextStepIndex);
-                setAnimating(false);
-            }, 300);
-        } else {
-            handleSubmit();
-        }
-    };
-
-    const getNextStep = (currentIndex, answer) => {
-        const field = form.fields[currentIndex];
-
-        // Check if there's logic for this answer
-        if (field.logic && field.logic.length > 0) {
-            const rule = field.logic.find(r => r.ifValue === answer);
-            if (rule) {
-                if (rule.jumpTo === 'end') return -1; // Submit
-                const targetIndex = form.fields.findIndex(f => f.id.toString() === rule.jumpTo.toString());
-                if (targetIndex !== -1) return targetIndex;
-            }
-        }
-
-        // Default: Go to next index
-        if (currentIndex < form.fields.length - 1) {
-            return currentIndex + 1;
-        }
-        return -1; // End of form
-    };
-
-    const handlePrev = () => {
-        if (currentStep > 0) {
-            setAnimating(true);
-            setTimeout(() => {
-                setCurrentStep(prev => prev - 1);
-                setAnimating(false);
-            }, 300);
-        }
-    };
-
-    const handleSubmit = async () => {
+        setSubmitting(true);
         try {
             const response = await fetch(endpoints.submit(id), {
                 method: 'POST',
@@ -109,217 +69,189 @@ export default function FormView() {
 
             if (response.ok) {
                 setSubmitted(true);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             } else {
                 alert('Failed to submit form');
             }
         } catch (err) {
             console.error(err);
             alert('Error submitting form');
+        } finally {
+            setSubmitting(false);
         }
     };
 
-    // Render Field Helper
-    const renderField = (field) => {
+    const getUserName = () => {
+        const nameKey = Object.keys(formData).find(k => k.toLowerCase().includes('name'));
+        return nameKey ? formData[nameKey] : '';
+    };
+
+    const interpolateText = (text) => {
+        if (!text) return text;
+        return text.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+            const cleanKey = key.trim().toLowerCase();
+            let val = formData[key.trim()];
+            if (val) return val;
+            const foundField = Object.keys(formData).find(k => k.toLowerCase().includes(cleanKey));
+            if (foundField && formData[foundField]) return formData[foundField];
+            if (cleanKey === 'name') {
+                const n = getUserName();
+                if (n) return n;
+            }
+            return match;
+        });
+    };
+
+    const renderField = (field, index) => {
         const value = formData[field.label] || '';
+        const inputBaseClass = `w-full bg-transparent border-b-2 py-4 text-2xl placeholder:opacity-40 focus:outline-none transition-all font-light ${isDarkMode ? 'border-gray-700 text-white focus:border-white' : 'border-slate-300 text-slate-800 focus:border-slate-800'}`;
 
-        switch (field.type) {
-            case 'text':
-            case 'email':
-            case 'number':
-            case 'phone':
-                return (
-                    <input
-                        type={field.type === 'phone' ? 'tel' : field.type}
-                        className="w-full bg-transparent border-b-2 border-slate-300 py-4 text-3xl text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-slate-800 transition-colors font-light"
-                        style={{ borderColor: formData[field.label] ? form.theme?.color : undefined }}
-                        onChange={(e) => handleChange(field.label, e.target.value)}
-                        value={value}
-                        placeholder="Type here..."
-                        autoFocus
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleNext(e); }}
-                    />
-                );
-            case 'textarea':
-                return (
-                    <textarea
-                        className="w-full bg-transparent border-b-2 border-slate-300 py-4 text-2xl text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-slate-800 transition-colors font-light resize-none h-40"
-                        style={{ borderColor: formData[field.label] ? form.theme?.color : undefined }}
-                        onChange={(e) => handleChange(field.label, e.target.value)}
-                        value={value}
-                        placeholder="Type here..."
-                        autoFocus
-                    />
-                );
-            case 'dropdown':
-                return (
-                    <div className="space-y-3">
-                        {field.options.map((opt, idx) => (
-                            <div
-                                key={idx}
-                                onClick={() => {
-                                    handleChange(field.label, opt);
-                                    setTimeout(() => handleNext(), 200); // Auto advance
-                                }}
-                                className={`p-4 border rounded-lg cursor-pointer transition-all flex items-center justify-between group ${value === opt ? 'bg-slate-50 border-slate-800' : 'border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}
-                                style={{
-                                    borderColor: value === opt ? form.theme?.color : undefined,
-                                    backgroundColor: value === opt ? `${form.theme?.color}10` : undefined
-                                }}
-                            >
-                                <span className="text-xl text-slate-700 font-medium flex items-center gap-3">
-                                    <span className="w-8 h-8 rounded-md border border-slate-200 flex items-center justify-center text-sm text-slate-400 group-hover:border-slate-400">
-                                        {String.fromCharCode(65 + idx)}
-                                    </span>
-                                    {opt}
-                                </span>
-                                {value === opt && <CheckCircle size={20} color={form.theme?.color || '#6366f1'} />}
-                            </div>
-                        ))}
-                    </div>
-                );
-            case 'radio': // Treat radio same as dropdown for visual style
-                return (
-                    <div className="space-y-3">
-                        {field.options.map((opt, idx) => (
-                            <div
-                                key={idx}
-                                onClick={() => {
-                                    handleChange(field.label, opt);
-                                    setTimeout(() => handleNext(), 200);
-                                }}
-                                className={`p-4 border rounded-lg cursor-pointer transition-all flex items-center justify-between group ${value === opt ? 'bg-slate-50 border-slate-800' : 'border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}
-                                style={{
-                                    borderColor: value === opt ? form.theme?.color : undefined,
-                                    backgroundColor: value === opt ? `${form.theme?.color}10` : undefined
-                                }}
-                            >
-                                <span className="text-xl text-slate-700 font-medium flex items-center gap-3">
-                                    <span className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center group-hover:border-slate-400">
-                                        {value === opt && <div className="w-3 h-3 rounded-full" style={{ backgroundColor: form.theme?.color }}></div>}
-                                    </span>
-                                    {opt}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                );
-            case 'checkbox':
-                return (
-                    <label className={`flex items-center gap-4 p-6 border-2 rounded-xl cursor-pointer transition-all ${value === 'Yes' ? 'border-primary bg-primary/5' : 'border-slate-200'}`}
-                        style={{ borderColor: value === 'Yes' ? form.theme?.color : undefined }}
-                    >
+        return (
+            <div key={field.id} className="mb-16 animate-fade-in">
+                <div className={`flex items-center gap-3 mb-4 font-semibold uppercase tracking-widest text-xs ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
+                    <span>Question {index + 1}</span>
+                    {field.required && <span className="text-red-500 ml-4">* Required</span>}
+                </div>
+                <h2 className="text-3xl font-bold mb-8 leading-tight tracking-tight">
+                    {interpolateText(field.label)}
+                </h2>
+                
+                <div className="min-h-[60px]">
+                    {field.type === 'text' || field.type === 'email' || field.type === 'number' || field.type === 'phone' ? (
                         <input
-                            type="checkbox"
-                            checked={value === 'Yes'}
-                            onChange={(e) => handleChange(field.label, e.target.checked ? 'Yes' : 'No')}
-                            className="w-8 h-8 rounded text-primary focus:ring-primary"
-                            style={{ color: form.theme?.color }}
+                            type={field.type === 'phone' ? 'tel' : field.type}
+                            className={inputBaseClass}
+                            style={{ borderColor: formData[field.label] ? form.theme?.color : undefined }}
+                            onChange={(e) => handleChange(field.label, e.target.value)}
+                            value={value}
+                            placeholder="Type your answer here..."
                         />
-                        <span className="text-2xl font-medium text-slate-700">Yes, I agree</span>
-                    </label>
-                );
-            default:
-                return null;
-        }
+                    ) : field.type === 'textarea' ? (
+                        <textarea
+                            className={`${inputBaseClass} resize-none h-32 text-xl`}
+                            style={{ borderColor: formData[field.label] ? form.theme?.color : undefined }}
+                            onChange={(e) => handleChange(field.label, e.target.value)}
+                            value={value}
+                            placeholder="Type your answer here..."
+                        />
+                    ) : (field.type === 'dropdown' || field.type === 'radio') ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {field.options.map((opt, idx) => {
+                                const isSelected = value === opt;
+                                return (
+                                    <div
+                                        key={idx}
+                                        onClick={() => handleChange(field.label, opt)}
+                                        className={`p-5 rounded-2xl cursor-pointer transition-all duration-300 flex items-center justify-between group border ${isSelected ? (isDarkMode ? 'bg-white/20 border-white/50 shadow-lg' : 'bg-black/5 border-slate-800 shadow-md') : (isDarkMode ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white/40 border-slate-200 hover:bg-white/60')}`}
+                                        style={{
+                                            borderColor: isSelected ? form.theme?.color : undefined,
+                                            backgroundColor: isSelected ? `${form.theme?.color}15` : undefined
+                                        }}
+                                    >
+                                        <span className={`text-lg font-medium flex items-center gap-4 ${isDarkMode ? 'text-white' : 'text-slate-700'}`}>
+                                            <span className={`w-8 h-8 rounded-lg border flex items-center justify-center text-sm transition-colors ${isSelected ? 'border-current' : (isDarkMode ? 'border-white/30 text-white/50' : 'border-slate-300 text-slate-400')}`} style={{ borderColor: isSelected ? form.theme?.color : undefined, color: isSelected ? form.theme?.color : undefined }}>
+                                                {String.fromCharCode(65 + idx)}
+                                            </span>
+                                            {opt}
+                                        </span>
+                                        {isSelected && <CheckCircle size={24} color={form.theme?.color || (isDarkMode ? '#fff' : '#000')} />}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : field.type === 'checkbox' ? (
+                        <label className={`flex items-center gap-4 p-6 border-2 rounded-2xl cursor-pointer transition-all ${value === 'Yes' ? (isDarkMode ? 'bg-white/10 border-white/50' : 'bg-black/5 border-black/20') : (isDarkMode ? 'border-white/10 hover:border-white/30' : 'border-slate-200 hover:border-slate-300')}`}
+                            style={{ borderColor: value === 'Yes' ? form.theme?.color : undefined }}
+                        >
+                            <input
+                                type="checkbox"
+                                checked={value === 'Yes'}
+                                onChange={(e) => handleChange(field.label, e.target.checked ? 'Yes' : 'No')}
+                                className="w-8 h-8 rounded text-primary focus:ring-primary focus:ring-offset-0"
+                                style={{ color: form.theme?.color }}
+                            />
+                            <span className={`text-2xl font-medium ${isDarkMode ? 'text-white' : 'text-slate-700'}`}>Yes, I agree</span>
+                        </label>
+                    ) : null}
+                </div>
+            </div>
+        );
     };
 
-    if (loading) return <div className="flex justify-center items-center h-screen"><div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>;
+    if (loading) return (
+        <div className={`flex justify-center items-center min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-slate-50'}`}>
+            <div className={`w-12 h-12 border-4 border-t-transparent rounded-full animate-spin ${isDarkMode ? 'border-white' : 'border-indigo-600'}`}></div>
+        </div>
+    );
 
-    if (error) return <div className="flex justify-center items-center h-screen text-red-500 font-medium">⚠️ {error}</div>;
+    if (error) return (
+        <div className={`flex justify-center items-center min-h-screen font-medium text-xl ${isDarkMode ? 'bg-gray-900 text-red-400' : 'bg-slate-50 text-red-500'}`}>
+            ⚠️ {error}
+        </div>
+    );
 
     if (submitted) {
+        const userName = getUserName();
+        const earnedPoints = Object.values(formData).filter(v => v !== '').length * 50;
         return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-                <div className="text-center animate-scale-in">
-                    <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <CheckCircle size={48} className="text-green-600" />
+            <div className={`min-h-screen flex flex-col items-center justify-center p-4 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-slate-50 text-slate-800'}`}>
+                <div className={`w-full max-w-2xl p-12 rounded-3xl text-center border shadow-2xl ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-100'}`}>
+                    <div className="text-6xl mb-6">🎉</div>
+                    <h1 className="text-4xl font-bold mb-4">{userName ? `Thank you, ${userName}!` : 'Submission Successful!'}</h1>
+                    <p className="text-slate-500 mb-8 text-lg">Your responses have been recorded securely.</p>
+                    <div className={`inline-block px-8 py-4 rounded-2xl border font-bold text-xl ${isDarkMode ? 'bg-indigo-900/30 border-indigo-500 text-indigo-300' : 'bg-indigo-50 border-indigo-100 text-indigo-600'}`}>
+                        You earned {earnedPoints} XP! ⭐
                     </div>
-                    <h1 className="text-4xl font-bold text-slate-800 mb-4">Thank You!</h1>
-                    <p className="text-lg text-slate-500 max-w-md mx-auto">Your response has been successfully recorded. You may close this tab now.</p>
                 </div>
             </div>
         );
     }
 
-    const currentField = form.fields[currentStep];
-    const progress = ((currentStep + 1) / form.fields.length) * 100;
-
     return (
-        <div className={`min-h-screen flex flex-col ${form.theme?.font || 'font-sans'} transition-colors duration-500 bg-slate-50`}>
-            {/* Progress Bar */}
-            <div className="fixed top-0 left-0 w-full h-1.5 bg-slate-200 z-50">
-                <div
-                    className="h-full transition-all duration-500 ease-out"
-                    style={{ width: `${progress}%`, backgroundColor: form.theme?.color || '#6366f1' }}
-                ></div>
-            </div>
-
-            {/* Navigation Header */}
-            <div className="fixed top-6 right-6 z-40 flex items-center gap-4">
-                <div className="text-sm font-medium px-3 py-1 bg-black/5 rounded-full text-slate-500">
-                    {currentStep + 1} <span className="opacity-50">/</span> {form.fields.length}
+        <div className={`min-h-screen flex flex-col ${form.theme?.font || 'font-sans'} transition-colors duration-500 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-slate-50 text-slate-900'}`}>
+            {/* Header */}
+            <header className="sticky top-0 z-50 bg-inherit border-b border-white/10 backdrop-blur-md px-6 py-4 flex justify-between items-center shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">S</div>
+                    <span className="font-bold text-lg">{form.theme?.sponsor || 'SmartForm'}</span>
                 </div>
-            </div>
+                <button 
+                    onClick={() => setIsDarkMode(!isDarkMode)}
+                    className={`p-2 rounded-full border transition-all ${isDarkMode ? 'bg-gray-800 border-gray-700 text-yellow-400' : 'bg-white border-slate-200 text-slate-700'}`}
+                >
+                    {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                </button>
+            </header>
 
-            {/* Main Content */}
-            <div className="flex-1 flex items-center justify-center p-6 md:p-12 max-w-4xl mx-auto w-full">
-                <div className={`w-full transition-all duration-500 transform ${animating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
-
-                    {/* Question Number */}
-                    <div className="flex items-center gap-3 mb-6 text-slate-500 font-semibold uppercase tracking-wider text-sm">
-                        <span>Question {currentStep + 1}</span>
-                        {currentField.required && <span className="text-red-500">* Required</span>}
-                    </div>
-
-                    {/* Question Label */}
-                    <h1 className="text-3xl md:text-5xl font-bold text-slate-900 mb-8 md:mb-12 leading-tight">
-                        {currentField.label}
+            {/* Form Content */}
+            <main className="flex-1 max-w-4xl w-full mx-auto p-6 md:p-16">
+                <div className="mb-16">
+                    <h1 className="text-5xl md:text-6xl font-black mb-6 tracking-tight" style={{ color: form.theme?.color }}>
+                        {form.title}
                     </h1>
+                    <p className="text-xl text-slate-500 font-medium italic">Please answer all questions below.</p>
+                </div>
 
-                    {/* Description (Optional) */}
-                    {/* <p className="text-xl text-slate-500 mb-8 font-light">Description here if applicable...</p> */}
+                <form onSubmit={handleSubmit} className="space-y-12">
+                    {visibleFields.map((field, index) => renderField(field, index))}
 
-                    {/* Input Area */}
-                    <div className="mb-12">
-                        {renderField(currentField)}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-4">
+                    <div className="pt-10 border-t border-slate-200/50">
                         <button
-                            onClick={handleNext}
-                            className="group px-8 py-4 rounded-xl text-white font-bold text-xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center gap-3"
+                            type="submit"
+                            disabled={submitting}
+                            className="w-full md:w-auto px-12 py-5 rounded-2xl text-white font-bold text-2xl shadow-xl hover:scale-[1.02] transition-all active:scale-95 disabled:opacity-50"
                             style={{ backgroundColor: form.theme?.color || '#6366f1' }}
                         >
-                            {currentStep === form.fields.length - 1 ? 'Submit' : 'OK'}
-                            {currentStep < form.fields.length - 1 && <ArrowRight size={24} className="group-hover:translate-x-1 transition-transform" />}
-                            {currentStep === form.fields.length - 1 && <CheckCircle size={24} />}
+                            {submitting ? 'Submitting...' : 'Submit Form'}
                         </button>
-
-                        {currentStep > 0 && (
-                            <button
-                                onClick={handlePrev}
-                                className="px-6 py-4 rounded-xl text-slate-500 font-bold text-lg hover:bg-slate-100 transition-colors flex items-center gap-2"
-                            >
-                                <ArrowLeft size={20} /> Back
-                            </button>
-                        )}
-
-                        <span className="text-sm text-slate-400 hidden md:inline-block ml-4">
-                            press <strong>Enter ↵</strong>
-                        </span>
                     </div>
+                </form>
+            </main>
 
-                </div>
-            </div>
-
-            {/* Branding Footer */}
-            <div className="p-6 text-center">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/5 text-xs font-semibold text-slate-500">
-                    <span>Powered by</span>
-                    <span className="text-slate-800">SmartForm</span>
-                </div>
-            </div>
+            {/* Footer */}
+            <footer className="p-10 text-center opacity-40 text-sm font-medium">
+                &copy; {new Date().getFullYear()} {form.theme?.sponsor || 'SmartForm'}. Created with passion.
+            </footer>
         </div>
     );
 }

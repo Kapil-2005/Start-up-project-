@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { ArrowLeft, Clock, BarChart2, Download, Filter, LayoutGrid, List } from 'lucide-react';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
+
+const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#0ea5e9', '#ec4899'];
 import { cn } from '../utils/cn';
 import { endpoints } from '../config/api';
 
@@ -54,6 +57,21 @@ export default function Responses() {
             percentage: Math.round((count / total) * 100)
         })).sort((a, b) => b.count - a.count);
     };
+
+    const getSubmissionTrends = () => {
+        if (!responses.length) return [];
+        const trends = {};
+        // Sort ascending for time series
+        const sortedForTrends = [...responses].sort((a, b) => new Date(a.submittedAt) - new Date(b.submittedAt));
+        
+        sortedForTrends.forEach(r => {
+            const date = new Date(r.submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            trends[date] = (trends[date] || 0) + 1;
+        });
+        
+        return Object.entries(trends).map(([date, Submissions]) => ({ date, Submissions }));
+    };
+    const trendData = getSubmissionTrends();
 
     // Sorting Logic
     const sortedResponses = [...responses].sort((a, b) => {
@@ -174,40 +192,97 @@ export default function Responses() {
                                     </div>
                                 </div>
 
+                                {/* Submission Trends */}
+                                {trendData.length > 0 && (
+                                    <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+                                        <h3 className="text-lg font-bold text-slate-800 mb-6">Daily Submissions</h3>
+                                        <div className="h-[300px] w-full">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <AreaChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                                    <defs>
+                                                        <linearGradient id="colorSubmissions" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor={themeColor} stopOpacity={0.8}/>
+                                                            <stop offset="95%" stopColor={themeColor} stopOpacity={0}/>
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                                                    <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                    <RechartsTooltip 
+                                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                                        itemStyle={{ color: themeColor, fontWeight: 'bold' }}
+                                                    />
+                                                    <Area type="monotone" dataKey="Submissions" stroke={themeColor} strokeWidth={3} fillOpacity={1} fill="url(#colorSubmissions)" />
+                                                </AreaChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Field Visualization */}
                                 <div className="space-y-6">
                                     <h3 className="text-lg font-bold text-slate-800 px-1">Response Analytics</h3>
-                                    {form.fields.map((field) => {
-                                        const analytics = getFieldAnalytics(field);
-                                        if (!analytics) return null;
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        {form.fields.map((field) => {
+                                            const analytics = getFieldAnalytics(field);
+                                            if (!analytics || analytics.length === 0) return null;
 
-                                        return (
-                                            <div key={field.id} className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
-                                                <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">{field.label}</h4>
-                                                <div className="space-y-4">
-                                                    {analytics.map((item, idx) => (
-                                                        <div key={idx}>
-                                                            <div className="flex justify-between text-sm mb-1">
-                                                                <span className="text-slate-600 font-medium">{item.label}</span>
-                                                                <span className="text-slate-400">{item.count} ({item.percentage}%)</span>
-                                                            </div>
-                                                            <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                                                                <div
-                                                                    className="h-2.5 rounded-full transition-all duration-1000 ease-out"
-                                                                    style={{ width: `${item.percentage}%`, backgroundColor: themeColor }}
-                                                                ></div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
+                                            const usePieChart = analytics.length <= 4; // Pie for few options, Bar for many
+                                            
+                                            return (
+                                                <div key={field.id} className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm flex flex-col">
+                                                    <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-6">{field.label}</h4>
+                                                    <div className="flex-1 min-h-[250px] flex items-center justify-center">
+                                                        <ResponsiveContainer width="100%" height={250}>
+                                                            {usePieChart ? (
+                                                                <PieChart>
+                                                                    <Pie 
+                                                                        data={analytics} 
+                                                                        dataKey="count" 
+                                                                        nameKey="label" 
+                                                                        cx="50%" 
+                                                                        cy="50%" 
+                                                                        innerRadius={60}
+                                                                        outerRadius={80} 
+                                                                        paddingAngle={5}
+                                                                    >
+                                                                        {analytics.map((entry, index) => (
+                                                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                                        ))}
+                                                                    </Pie>
+                                                                    <RechartsTooltip 
+                                                                        itemStyle={{ color: '#334155' }}
+                                                                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+                                                                    />
+                                                                    <Legend iconType="circle" />
+                                                                </PieChart>
+                                                            ) : (
+                                                                <BarChart data={analytics} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                                                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                                                                    <XAxis type="number" allowDecimals={false} hide />
+                                                                    <YAxis dataKey="label" type="category" width={100} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                                                                    <RechartsTooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                                                    <Bar dataKey="count" fill={themeColor} radius={[0, 4, 4, 0]}>
+                                                                        {analytics.map((entry, index) => (
+                                                                            <Cell key={`cell-${index}`} fill={themeColor} />
+                                                                        ))}
+                                                                    </Bar>
+                                                                </BarChart>
+                                                            )}
+                                                        </ResponsiveContainer>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })}
+                                    </div>
 
                                     {/* Fallback for fields without analytics */}
                                     {form.fields.every(f => !['dropdown', 'checkbox', 'radio'].includes(f.type)) && (
                                         <div className="text-center py-12 bg-slate-50 rounded-xl border border-slate-200 border-dashed">
-                                            <p className="text-slate-500">Visual analytics are available for Dropdown, Checkbox, and Radio fields.</p>
+                                            <p className="text-slate-500 flex flex-col items-center justify-center gap-3">
+                                                <BarChart2 size={32} className="text-slate-300" />
+                                                Visual analytics are automatically generated for Dropdown, Checkbox, and Radio fields.
+                                            </p>
                                         </div>
                                     )}
                                 </div>

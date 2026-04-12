@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Logs
 logs
 *.log
@@ -22,3 +23,17 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+=======
+node_modules
+.env
+dist
+.DS_Store
+npm-debug.log
+yarn-error.log
+.vscode
+.idea
+frontend/dist
+frontend/node_modules
+backend/node_modules
+backend/.env
+>>>>>>> a53fb97aa6f3acf75383214baa3aa7b450e3462c
