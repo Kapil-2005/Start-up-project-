@@ -9,8 +9,25 @@ const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(cors({
-    origin: process.env.CLIENT_URL || '*', // Allow all or specific client
-    credentials: true
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, curl, etc.)
+        if (!origin) return callback(null, true);
+        // Allow all origins (or restrict to specific ones via CLIENT_URL)
+        const allowedOrigins = process.env.CLIENT_URL
+            ? process.env.CLIENT_URL.split(',')
+            : [];
+        if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        // Also allow any Vercel preview deployments
+        if (origin.includes('vercel.app')) {
+            return callback(null, true);
+        }
+        return callback(null, true); // Allow all for now
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(bodyParser.json());
 
